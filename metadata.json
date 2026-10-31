@@ -1,6 +1,6 @@
 {
-  "name": "Rutas en Bici",
-  "description": "Descubre y reserva rutas en bicicleta guiadas por expertos locales en San Sebastián, Barcelona, Sevilla y Girona.",
+  "name": "Andes sobre Ruedas",
+  "description": "Tours en bicicleta por el Valle Sagrado de Cusco con guías locales. Explora rutas por Pisac, Maras y las montañas andinas; consulta disponibilidad y reserva online.",
   "permissions": [],
   "capabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
