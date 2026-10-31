@@ -1,0 +1,8 @@
+{
+  "name": "Rutas en Bici",
+  "description": "Descubre y reserva rutas en bicicleta guiadas por expertos locales en San Sebastián, Barcelona, Sevilla y Girona.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
