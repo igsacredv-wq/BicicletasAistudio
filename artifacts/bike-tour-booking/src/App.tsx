@@ -68,7 +68,7 @@ const TOURS: Tour[] = [
     priceUSD: 119,
     maxCapacity: 8,
     availableSeats: 8,
-    image: '/images/valle-sagrado-maras.png',
+    image: '/assets/aistudio/IMG_20261010_135534236_HDR_02ca2d6b.jpg',
     category: 'Salineras',
     badge: 'Favorito local',
     rating: '4,98',
@@ -87,7 +87,7 @@ const TOURS: Tour[] = [
     priceUSD: 89,
     maxCapacity: 8,
     availableSeats: 8,
-    image: '/images/valle-sagrado-terraces.png',
+    image: '/assets/aistudio/IMG_20261012_161823591_HDR_d112481d.jpg',
     category: 'Andenes',
     badge: 'Más popular',
     rating: '4,95',
@@ -106,7 +106,7 @@ const TOURS: Tour[] = [
     priceUSD: 159,
     maxCapacity: 6,
     availableSeats: 6,
-    image: '/images/valle-sagrado-cycling-hero.png',
+    image: '/assets/aistudio/IMG_20261011_130604499_HDR_9b9f92a9.jpg',
     category: 'Montaña',
     badge: 'Jornada completa',
     rating: '4,99',
@@ -157,7 +157,7 @@ const GALLERY_PHOTOS: GalleryPhoto[] = [
   },
   {
     id: 'photo-trail-riders',
-    title: 'En ruta con nuestros guías locales',
+    title: 'Ciclistas en el Valle Sagrado',
     location: 'Senderos de Pisac y Maras',
     category: 'Compañerismo',
     src: '/assets/aistudio/IMG_20261012_161823591_HDR_d112481d.jpg',
@@ -166,34 +166,34 @@ const GALLERY_PHOTOS: GalleryPhoto[] = [
       'Descenso fluido por acantilados y curvas panorámicas con vistas completas hacia la cordillera de Urubamba.',
   },
   {
-    id: 'photo-maras-terraces',
-    title: 'Las mil terrazas blancas de Maras',
-    location: 'Salineras de Maras',
-    category: 'Patrimonio',
-    src: '/images/valle-sagrado-maras.png',
-    altitude: '3,200 msnm',
-    description:
-      'Pozas artesanales de sal que han sido cosechadas desde tiempos preíncas en la ladera de la montaña.',
-  },
-  {
-    id: 'photo-pisac-terraces',
-    title: 'Andenes milenarios y valles fértiles',
-    location: 'Pisac · Valle Sagrado',
-    category: 'Patrimonio',
-    src: '/images/valle-sagrado-terraces.png',
-    altitude: '2,972 msnm',
-    description:
-      'La majestuosidad de la ingeniería agrícola andina contemplada desde miradores naturales en bicicleta.',
-  },
-  {
     id: 'photo-urubamba-traverse',
-    title: 'Travesía campestre por Urubamba',
-    location: 'Urubamba · Valle Sagrado',
+    title: 'Travesía completa por Urubamba',
+    location: 'Urubamba · Río Sagrado',
     category: 'Rutas & Montaña',
-    src: '/images/valle-sagrado-cycling-hero.png',
+    src: '/assets/aistudio/IMG_20261011_130604499_HDR_9b9f92a9.jpg',
     altitude: '2,870 msnm',
     description:
-      'Caminos de tierra rodeados de sembríos de maíz blanco gigante y montañas nevadas al horizonte.',
+      'Caminos ribereños y cruces ferroviarios entre la frondosa vegetación del río Vilcanota.',
+  },
+  {
+    id: 'photo-maras-highlands',
+    title: 'Caminos altos hacia Maras',
+    location: 'Maras · Valle Sagrado',
+    category: 'Patrimonio',
+    src: '/assets/aistudio/IMG_20261010_135534236_HDR_02ca2d6b.jpg',
+    altitude: '3,380 msnm',
+    description:
+      'La inmensidad del cielo cusqueño y la arquitectura rústica tradicional en las rutas de montaña.',
+  },
+  {
+    id: 'photo-sacred-riders-panoramic',
+    title: 'Aventura compartida sobre dos ruedas',
+    location: 'Valle Sagrado de los Incas',
+    category: 'Compañerismo',
+    src: '/assets/aistudio/IMG_20261012_161823591_HDR_d112481d.jpg',
+    altitude: '3,100 msnm',
+    description:
+      'Explorando senderos fuera de las rutas comerciales con guías locales nativos.',
   },
 ];
 
@@ -417,8 +417,9 @@ function Home() {
           <div className="hero-image-wrap">
             <img
               className="hero-image"
-              src="/images/valle-sagrado-cycling-hero.png"
-              alt="Ciclistas recorriendo un sendero entre las montañas del Valle Sagrado de Cusco"
+              src="/assets/aistudio/IMG_20261012_161823591_HDR_d112481d.jpg"
+              alt="Ciclistas en el Valle Sagrado"
+              fetchPriority="high"
             />
             <div className="image-shade" />
             <div className="hero-image-caption">
@@ -1060,8 +1061,8 @@ function Home() {
         <section className="manifesto" id="nosotros">
           <div className="manifesto-image">
             <img
-              src="/images/valle-sagrado-terraces.png"
-              alt="Andenes agrícolas incas junto a una ruta de bicicleta en el Valle Sagrado"
+              src="/assets/aistudio/IMG_20261010_135534236_HDR_02ca2d6b.jpg"
+              alt="Bicicleta de montaña en sendero andino con casa rústica de piedra y cielos del Valle Sagrado"
               loading="lazy"
             />
           </div>
