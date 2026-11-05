@@ -2,14 +2,10 @@
   "name": "workspace",
   "version": "0.0.0",
   "license": "MIT",
-  "workspaces": [
-    "artifacts/*",
-    "lib/*",
-    "scripts"
-  ],
+  "packageManager": "pnpm@10.34.3",
   "scripts": {
-    "dev": "npm run dev --workspace=@workspace/bike-tour-booking",
-    "build": "npm run build --workspace=@workspace/bike-tour-booking",
+    "dev": "pnpm --filter @workspace/bike-tour-booking run dev",
+    "build": "pnpm --filter @workspace/bike-tour-booking run build",
     "typecheck": "tsc -b",
     "typecheck:libs": "tsc --build",
     "lint": "tsc --noEmit"
@@ -22,38 +18,12 @@
     "prettier": "^3.9.10",
     "typescript": "~5.9.3"
   },
-  "workspaces": {
-    "packages": [
-      "artifacts/*",
-      "lib/*",
-      "lib/integrations/*",
-      "scripts"
-    ],
-    "catalog": {
-      "@replit/vite-plugin-cartographer": "^0.5.21",
-      "@replit/vite-plugin-dev-banner": "^0.1.1",
-      "@replit/vite-plugin-runtime-error-modal": "^0.0.6",
-      "@tailwindcss/vite": "^4.1.14",
-      "@tanstack/react-query": "^5.90.21",
-      "@types/node": "^25.3.3",
-      "@types/react": "^19.2.0",
-      "@types/react-dom": "^19.2.0",
-      "@vitejs/plugin-react": "^5.0.4",
-      "class-variance-authority": "^0.7.1",
-      "clsx": "^2.1.1",
-      "drizzle-orm": "^0.45.2",
-      "framer-motion": "^12.23.24",
-      "lucide-react": "^0.545.0",
-      "react": "19.1.0",
-      "react-dom": "19.1.0",
-      "tailwind-merge": "^3.3.1",
-      "tailwindcss": "^4.1.14",
-      "tsx": "^4.21.0",
-      "vite": "^7.3.2",
-      "wouter": "^3.3.5",
-      "zod": "^3.25.76"
-    }
-  },
+  "workspaces": [
+    "artifacts/*",
+    "lib/*",
+    "lib/integrations/*",
+    "scripts"
+  ],
   "overrides": {
     "proxy-addr@^2": "^2.0.8",
     "source-map-js@^1": "^1.2.2",
