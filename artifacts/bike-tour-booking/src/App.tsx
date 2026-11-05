@@ -5,6 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import {
+  Activity,
   ArrowDown,
   ArrowRight,
   Bike,
@@ -21,9 +22,11 @@ import {
   Maximize2,
   Menu,
   Mountain,
+  Play,
   ShieldCheck,
   Star,
   Users,
+  Video,
   X,
 } from 'lucide-react';
 import {
@@ -32,8 +35,27 @@ import {
   useLocation,
   Router as WouterRouter,
 } from 'wouter';
+import TourMap from '@/components/TourMap';
 
 const queryClient = new QueryClient();
+
+export interface Waypoint {
+  name: string;
+  km: string;
+  altitude: string;
+  desc: string;
+}
+
+export interface GpsTrack {
+  distance: string;
+  duration: string;
+  elevationGain: string;
+  maxAltitude: string;
+  avgSpeed: string;
+  date: string;
+  rider: string;
+  waypoints: Waypoint[];
+}
 
 export interface Tour {
   id: string;
@@ -52,6 +74,9 @@ export interface Tour {
   badge?: string;
   rating: string;
   reviews: number;
+  videoUrl?: string;
+  videoBadge?: string;
+  gpsTrack?: GpsTrack;
 }
 
 const TOURS: Tour[] = [
@@ -62,8 +87,8 @@ const TOURS: Tour[] = [
     description:
       'Descubre las salineras de Maras y los caminos panorámicos del Valle Sagrado a un ritmo cómodo, acompañado por nuestro equipo local.',
     city: 'Maras, Cusco',
-    durationHours: '5',
-    distanceKm: '28',
+    durationHours: '5.5',
+    distanceKm: '36.5',
     difficulty: 'Intermedio',
     priceUSD: 119,
     maxCapacity: 8,
@@ -73,6 +98,67 @@ const TOURS: Tour[] = [
     badge: 'Favorito local',
     rating: '4,98',
     reviews: 142,
+    videoUrl: '/videos/maras-relive-tour.mp4',
+    videoBadge: 'Ruta 3D Relive · 36.5 km',
+    gpsTrack: {
+      distance: '36.5 km',
+      duration: '5h 30m',
+      elevationGain: '+456 m',
+      maxAltitude: '3,791 msnm',
+      avgSpeed: '6.6 km/h',
+      date: '21 de enero, 2024',
+      rider: "Juan Gabriel Salazar's Ride (Biker 21)",
+      waypoints: [
+        {
+          name: 'Cachimayo',
+          km: '0.0 km',
+          altitude: '3,450 m',
+          desc: 'Inicio del recorrido en bicicleta de montaña por caminos rurales andinos',
+        },
+        {
+          name: 'Mirador de Puna',
+          km: '9.1 km',
+          altitude: '3,791 m',
+          desc: 'Punto de máxima altitud con vistas abiertas a nevados y cielo andino',
+        },
+        {
+          name: 'Chequerec',
+          km: '17.5 km',
+          altitude: '3,550 m',
+          desc: 'Travesía escénica junto a lagunas y campos de cultivo dorado',
+        },
+        {
+          name: 'Mahuaypampa',
+          km: '22.9 km',
+          altitude: '3,600 m',
+          desc: 'Pueblo tradicional donde conectamos con senderos hacia la meseta',
+        },
+        {
+          name: 'Anccoto',
+          km: '26.4 km',
+          altitude: '3,400 m',
+          desc: 'Caminos de herradura y descenso panorámico previo a las salineras',
+        },
+        {
+          name: 'Maras Pueblo',
+          km: '31.1 km',
+          altitude: '3,380 m',
+          desc: 'Paso por el histórico poblado colonial y miradores a las pozas de sal',
+        },
+        {
+          name: 'Cañón de Media Luna',
+          km: '34.9 km',
+          altitude: '2,900 m',
+          desc: 'Descenso fluido entre murallas rocosas y senderos técnicos',
+        },
+        {
+          name: 'Río Vilcanota / Urubamba',
+          km: '36.5 km',
+          altitude: '2,870 m',
+          desc: 'Llegada al fondo del Valle Sagrado junto al puente ferroviario',
+        },
+      ],
+    },
   },
   {
     id: 'pisac-terraces',
@@ -201,6 +287,7 @@ function Home() {
   const [activeCategory, setActiveCategory] = useState('Todos');
   const [galleryCategory, setGalleryCategory] = useState<string>('Todas');
   const [activePhoto, setActivePhoto] = useState<GalleryPhoto | null>(null);
+  const [selectedVideoTour, setSelectedVideoTour] = useState<Tour | null>(null);
   const [selectedTourId, setSelectedTourId] = useState<string>('maras-salt-mines');
   const [date, setDate] = useState(() => {
     const tomorrow = new Date();
@@ -216,6 +303,13 @@ function Home() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchDestination, setSearchDestination] = useState('');
   const [searched, setSearched] = useState(false);
+  const [quotaExceeded, setQuotaExceeded] = useState(false);
+
+  useEffect(() => {
+    const handleQuota = () => setQuotaExceeded(true);
+    window.addEventListener('gmp-quota-exceeded', handleQuota);
+    return () => window.removeEventListener('gmp-quota-exceeded', handleQuota);
+  }, []);
 
   const selectedTour = useMemo(
     () => TOURS.find((t) => t.id === selectedTourId) || TOURS[0],
@@ -241,15 +335,18 @@ function Home() {
   }, [galleryCategory]);
 
   useEffect(() => {
-    if (!activePhoto) return;
+    if (!activePhoto && !selectedVideoTour) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setActivePhoto(null);
-      if (e.key === 'ArrowLeft') {
+      if (e.key === 'Escape') {
+        setActivePhoto(null);
+        setSelectedVideoTour(null);
+      }
+      if (activePhoto && e.key === 'ArrowLeft') {
         const currentIndex = filteredPhotos.findIndex((p) => p.id === activePhoto.id);
         const prevIndex = (currentIndex - 1 + filteredPhotos.length) % filteredPhotos.length;
         setActivePhoto(filteredPhotos[prevIndex]);
       }
-      if (e.key === 'ArrowRight') {
+      if (activePhoto && e.key === 'ArrowRight') {
         const currentIndex = filteredPhotos.findIndex((p) => p.id === activePhoto.id);
         const nextIndex = (currentIndex + 1) % filteredPhotos.length;
         setActivePhoto(filteredPhotos[nextIndex]);
@@ -257,7 +354,7 @@ function Home() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activePhoto, filteredPhotos]);
+  }, [activePhoto, selectedVideoTour, filteredPhotos]);
 
   const handlePrevPhoto = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -298,8 +395,66 @@ function Home() {
     setActiveCategory('Todos');
   };
 
+  // Subtle scroll reveal entrance observer
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      document
+        .querySelectorAll(
+          '.reveal-on-scroll, .reveal-slide-left, .reveal-slide-right, .reveal-scale',
+        )
+        .forEach((el) => el.classList.add('is-revealed'));
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries, obs) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-revealed');
+            obs.unobserve(entry.target);
+          }
+        });
+      },
+      {
+        threshold: 0.08,
+        rootMargin: '0px 0px -40px 0px',
+      },
+    );
+
+    const timer = setTimeout(() => {
+      const elements = document.querySelectorAll(
+        '.reveal-on-scroll:not(.is-revealed), .reveal-slide-left:not(.is-revealed), .reveal-slide-right:not(.is-revealed), .reveal-scale:not(.is-revealed)',
+      );
+      elements.forEach((el) => observer.observe(el));
+    }, 40);
+
+    return () => {
+      clearTimeout(timer);
+      observer.disconnect();
+    };
+  }, [activeCategory, galleryCategory, searched]);
+
   return (
     <div className="site-shell">
+      {quotaExceeded && (
+        <div className="bg-amber-50 border-b border-amber-200 text-amber-900 px-4 py-2.5 text-xs md:text-sm text-center sticky top-0 z-50 shadow-sm">
+          <span>
+            Google Maps Platform quota reached. If you are the app owner, visit{' '}
+            <a
+              href="https://developers.google.com/maps/ai/ai-studio?utm_campaign=gmp_mcp_codeassist_v1_aistudio#quota_exceeded_errors"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline font-semibold text-amber-950 hover:text-amber-800"
+            >
+              maps developer site
+            </a>{' '}
+            for instructions to update your account.
+          </span>
+        </div>
+      )}
+
       {/* Top announcement bar */}
       <div className="announcement">
         <span className="announcement-dot" /> Aventura local · Cusco, Perú{' '}
@@ -324,6 +479,9 @@ function Home() {
         <nav className={mobileOpen ? 'main-nav nav-open' : 'main-nav'}>
           <a href="#experiencias" onClick={() => setMobileOpen(false)}>
             Experiencias
+          </a>
+          <a href="#mapa-rutas" onClick={() => setMobileOpen(false)}>
+            Mapa de rutas
           </a>
           <a href="#galeria" onClick={() => setMobileOpen(false)}>
             Galería
@@ -360,7 +518,7 @@ function Home() {
       <main>
         {/* Hero Section */}
         <section className="hero" id="inicio">
-          <div className="hero-copy">
+          <div className="hero-copy reveal-slide-left">
             <div className="eyebrow hero-eyebrow">
               <span className="eyebrow-line" /> AVENTURA LOCAL · CUSCO, PERÚ
             </div>
@@ -414,7 +572,7 @@ function Home() {
             </a>
           </div>
 
-          <div className="hero-image-wrap">
+          <div className="hero-image-wrap reveal-scale delay-2">
             <img
               className="hero-image"
               src="/assets/aistudio/IMG_20261012_161823591_HDR_d112481d.jpg"
@@ -448,7 +606,7 @@ function Home() {
         </section>
 
         {/* Value Strip */}
-        <div className="value-strip" aria-label="Ventajas de nuestros tours">
+        <div className="value-strip reveal-on-scroll delay-3" aria-label="Ventajas de nuestros tours">
           <div>
             <span className="value-icon">
               <Mountain size={18} />
@@ -479,13 +637,13 @@ function Home() {
         </div>
 
         {/* Quick Search */}
-        <section className="search-section" id="busqueda">
-          <div className="search-heading">
+        <section className="search-section reveal-on-scroll" id="busqueda">
+          <div className="search-heading reveal-slide-left">
             <span>01 — ELIGE TU RUTA ANDINA</span>
             <p>¿Qué rincón del Valle quieres pedalear?</p>
           </div>
           <form
-            className="search-panel"
+            className="search-panel reveal-scale delay-1"
             onSubmit={(event) => {
               event.preventDefault();
               setSearched(true);
@@ -555,7 +713,7 @@ function Home() {
               Buscar rutas <ArrowRight size={17} />
             </button>
           </form>
-          <div className="search-reassurance">
+          <div className="search-reassurance reveal-on-scroll delay-2">
             <span>
               <ShieldCheck size={14} /> Reserva flexible
             </span>
@@ -568,12 +726,12 @@ function Home() {
 
         {/* Experiences Section */}
         <section className="experiences section-wrap" id="experiencias">
-          <div className="section-topline">
+          <div className="section-topline reveal-on-scroll">
             <span>HECHAS PARA SENTIR EL VALLE SAGRADO</span>
             <span className="section-number">02 — 04</span>
           </div>
 
-          <div className="section-title-row">
+          <div className="section-title-row reveal-slide-left">
             <div>
               <div className="eyebrow" style={{ marginBottom: '8px' }}>
                 Elige tu aventura
@@ -613,7 +771,7 @@ function Home() {
             </div>
           )}
 
-          <div className="category-row">
+          <div className="category-row reveal-on-scroll delay-1">
             {CATEGORIES.map((category) => (
               <button
                 key={category}
@@ -631,9 +789,9 @@ function Home() {
 
           {shownTours.length ? (
             <div className="tour-grid" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
-              {shownTours.map((tour) => (
+              {shownTours.map((tour, idx) => (
                 <article
-                  className="tour-card"
+                  className={`tour-card reveal-on-scroll delay-${(idx % 3) + 1}`}
                   key={tour.id}
                   data-testid={`card-tour-${tour.id}`}
                 >
@@ -645,6 +803,20 @@ function Home() {
                       loading="lazy"
                     />
                     {tour.badge && <span className="tour-badge">{tour.badge}</span>}
+                    {tour.videoUrl && (
+                      <button
+                        type="button"
+                        className="tour-video-pill"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedVideoTour(tour);
+                        }}
+                        aria-label={`Ver video y ruta 3D de ${tour.name}`}
+                        title="Ver video 3D y ruta GPS"
+                      >
+                        <Play size={10} fill="currentColor" /> {tour.videoBadge || 'Ruta 3D Relive'}
+                      </button>
+                    )}
                     <span className="tour-difficulty">{tour.difficulty}</span>
                     <button
                       className={saved.includes(tour.id) ? 'save-tour saved' : 'save-tour'}
@@ -678,9 +850,20 @@ function Home() {
 
                     <h3>{tour.name}</h3>
                     <p className="tour-tagline">{tour.tagline}</p>
-                    <p className="tour-detail" style={{ lineHeight: '1.6', marginBottom: '12px' }}>
+                    <p className="tour-detail" style={{ lineHeight: '1.6', marginBottom: '8px' }}>
                       {tour.description}
                     </p>
+
+                    {tour.videoUrl && (
+                      <button
+                        type="button"
+                        className="tour-video-action-btn"
+                        onClick={() => setSelectedVideoTour(tour)}
+                        title="Abrir video 3D y telemetría de ruta"
+                      >
+                        <Video size={13} /> Ver recorrido GPS en video 3D ({tour.gpsTrack?.distance || `${tour.distanceKm} km`})
+                      </button>
+                    )}
 
                     <div className="tour-footer">
                       <div>
@@ -712,7 +895,77 @@ function Home() {
             </div>
           )}
 
-          <div className="after-cards">
+          {/* Interactive Map Component showing start/end points */}
+          <div className="tour-map-wrapper reveal-on-scroll" id="mapa-rutas">
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-end',
+                marginBottom: '16px',
+                flexWrap: 'wrap',
+                gap: '12px',
+              }}
+            >
+              <div>
+                <div className="eyebrow" style={{ marginBottom: '6px' }}>
+                  <MapPin
+                    size={13}
+                    style={{
+                      display: 'inline',
+                      verticalAlign: '-2px',
+                      marginRight: '5px',
+                    }}
+                  />
+                  Geografía y Puntos de Salida / Llegada
+                </div>
+                <h3
+                  style={{
+                    fontFamily: 'var(--app-font-serif)',
+                    fontSize: '28px',
+                    color: '#233e31',
+                    margin: 0,
+                  }}
+                >
+                  Mapa interactivo de rutas
+                </h3>
+                <p
+                  style={{
+                    fontSize: '12px',
+                    color: '#68736b',
+                    margin: '4px 0 0',
+                    maxWidth: '580px',
+                  }}
+                >
+                  Explora los puntos de partida (banderas verdes), llegada (metas
+                  doradas), altitudes y trazados por el Valle Sagrado.
+                </p>
+              </div>
+              <div
+                style={{
+                  fontSize: '11px',
+                  color: '#9a7840',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                <Mountain size={13} />
+                <span>Desniveles desde 3,791m hasta 2,792m</span>
+              </div>
+            </div>
+
+            <TourMap
+              onSelectTourForBooking={handleSelectTourForBooking}
+              onOpenTourVideo={(tourId) => {
+                const tour = TOURS.find((t) => t.id === tourId);
+                if (tour) setSelectedVideoTour(tour);
+              }}
+            />
+          </div>
+
+          <div className="after-cards reveal-on-scroll delay-1">
             <span>
               EL VALLE SAGRADO DE CUSCO. <em>UN CAMINO POR DESCUBRIR.</em>
             </span>
@@ -721,13 +974,13 @@ function Home() {
         </section>
 
         {/* Photo Gallery Section */}
-        <section className="gallery-section section-wrap" id="galeria">
+        <section className="gallery-section section-wrap reveal-on-scroll" id="galeria">
           <div className="section-topline">
             <span>FOTOGRAFÍAS REALES EN RUTA · VALLE SAGRADO</span>
             <span className="section-number">03 — 04</span>
           </div>
 
-          <div className="gallery-header">
+          <div className="gallery-header reveal-slide-left">
             <div>
               <div className="eyebrow" style={{ marginBottom: '8px' }}>
                 <Camera size={14} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: '6px' }} />
@@ -749,7 +1002,7 @@ function Home() {
           </div>
 
           {/* Category Filter Chips */}
-          <div className="gallery-filter-row">
+          <div className="gallery-filter-row reveal-on-scroll delay-1">
             {GALLERY_CATEGORIES.map((cat) => (
               <button
                 key={cat}
@@ -762,7 +1015,7 @@ function Home() {
           </div>
 
           {/* Photo Grid */}
-          <div className="gallery-grid">
+          <div className="gallery-grid reveal-scale delay-2">
             {filteredPhotos.map((photo, idx) => {
               let spanClass = 'col-span-4';
               if (filteredPhotos.length === 1) {
@@ -831,9 +1084,9 @@ function Home() {
         </section>
 
         {/* Dedicated Booking Section matching target page */}
-        <section className="booking-section" id="reservar">
+        <section className="booking-section reveal-on-scroll" id="reservar">
           <div className="booking-inner">
-            <div className="booking-copy">
+            <div className="booking-copy reveal-slide-left">
               <div className="eyebrow">Tu próxima historia empieza aquí</div>
               <h2>
                 Reserva tu lugar
@@ -869,7 +1122,7 @@ function Home() {
               </div>
             </div>
 
-            <div className="booking-form">
+            <div className="booking-form reveal-slide-right delay-1">
               {bookingDone ? (
                 <div className="booking-success">
                   <div className="success-mark">
@@ -1058,15 +1311,15 @@ function Home() {
         </section>
 
         {/* Manifesto Section */}
-        <section className="manifesto" id="nosotros">
-          <div className="manifesto-image">
+        <section className="manifesto reveal-on-scroll" id="nosotros">
+          <div className="manifesto-image reveal-scale">
             <img
               src="/assets/aistudio/IMG_20261010_135534236_HDR_02ca2d6b.jpg"
               alt="Bicicleta de montaña en sendero andino con casa rústica de piedra y cielos del Valle Sagrado"
               loading="lazy"
             />
           </div>
-          <div className="manifesto-copy">
+          <div className="manifesto-copy reveal-slide-right delay-1">
             <div className="eyebrow">
               <span className="eyebrow-line" /> UNA FORMA DISTINTA DE VIAJAR
             </div>
@@ -1093,12 +1346,12 @@ function Home() {
         </section>
 
         {/* How it Works */}
-        <section className="how-section section-wrap" id="como-funciona">
+        <section className="how-section section-wrap reveal-on-scroll" id="como-funciona">
           <div className="section-topline">
             <span>03 — TAN FÁCIL COMO SALIR</span>
             <span>Y TAN AUTÉNTICO COMO CONOCER</span>
           </div>
-          <div className="how-heading">
+          <div className="how-heading reveal-slide-left">
             <h2>
               De aquí a <em>ahí.</em>
             </h2>
@@ -1108,7 +1361,7 @@ function Home() {
               sin tener que pensarlo demasiado.
             </p>
           </div>
-          <div className="steps">
+          <div className="steps reveal-scale delay-1">
             <div className="step">
               <span className="step-number">01</span>
               <div className="step-icon">
@@ -1143,7 +1396,7 @@ function Home() {
               </p>
             </div>
           </div>
-          <div className="trust-strip">
+          <div className="trust-strip reveal-on-scroll delay-2">
             <ShieldCheck size={20} />
             <p>
               <strong>Planes claros, gente real.</strong> Cada ruta incluye lo
@@ -1154,8 +1407,8 @@ function Home() {
         </section>
 
         {/* FAQ Section matching target page */}
-        <section className="faq section-wrap" id="preguntas">
-          <div className="faq-heading">
+        <section className="faq section-wrap reveal-on-scroll" id="preguntas">
+          <div className="faq-heading reveal-slide-left">
             <div className="eyebrow">Antes de salir</div>
             <h2>
               Preguntas
@@ -1168,7 +1421,7 @@ function Home() {
             </a>
           </div>
 
-          <div className="faq-list">
+          <div className="faq-list reveal-slide-right delay-1">
             <details open>
               <summary>
                 ¿Necesito experiencia en bicicleta de montaña? <span>+</span>
@@ -1214,7 +1467,7 @@ function Home() {
         </section>
 
         {/* Last call banner */}
-        <section className="last-call">
+        <section className="last-call reveal-scale">
           <p>EL CAMINO CORTO NO SIEMPRE ES EL MEJOR.</p>
           <a href="#reservar">
             ¿Salimos a pedalear? <ArrowRight size={18} />
@@ -1298,6 +1551,139 @@ function Home() {
                   <ChevronRight size={20} />
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Video Modal (Relive 3D GPS Route) */}
+      {selectedVideoTour && selectedVideoTour.videoUrl && (
+        <div
+          className="video-modal-backdrop"
+          onClick={() => setSelectedVideoTour(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Video de ruta 3D: ${selectedVideoTour.name}`}
+        >
+          <div
+            className="video-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="video-modal-header">
+              <div>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '10px',
+                    color: '#f7d283',
+                    fontWeight: 600,
+                    letterSpacing: '0.05em',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  <Activity size={13} /> {selectedVideoTour.videoBadge || 'Grabación GPS 3D Relive'}
+                </div>
+                <h3>{selectedVideoTour.name}</h3>
+                <p>
+                  {selectedVideoTour.gpsTrack?.riderTitle || 'Juan Gabriel Salazar'} · {selectedVideoTour.gpsTrack?.date || 'Valle Sagrado, Cusco'}
+                </p>
+              </div>
+
+              <button
+                className="video-close-btn"
+                onClick={() => setSelectedVideoTour(null)}
+                aria-label="Cerrar video"
+                title="Cerrar (Esc)"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="video-player-box">
+              <video
+                src={selectedVideoTour.videoUrl}
+                controls
+                autoPlay
+                loop
+                playsInline
+                preload="auto"
+              >
+                Tu navegador no soporta reproducción de video HTML5.
+              </video>
+            </div>
+
+            {selectedVideoTour.gpsTrack && (
+              <>
+                <div className="video-telemetry-strip">
+                  <div className="video-metric-item">
+                    <small>Distancia GPS</small>
+                    <strong>{selectedVideoTour.gpsTrack.distance}</strong>
+                  </div>
+                  <div className="video-metric-item">
+                    <small>Tiempo en Ruta</small>
+                    <strong>{selectedVideoTour.gpsTrack.duration}</strong>
+                  </div>
+                  <div className="video-metric-item">
+                    <small>Desnivel Positivo</small>
+                    <strong>{selectedVideoTour.gpsTrack.elevationGain}</strong>
+                  </div>
+                  <div className="video-metric-item">
+                    <small>Altitud Máxima</small>
+                    <strong>{selectedVideoTour.gpsTrack.maxAltitude}</strong>
+                  </div>
+                </div>
+
+                {selectedVideoTour.gpsTrack.waypoints && selectedVideoTour.gpsTrack.waypoints.length > 0 && (
+                  <div className="video-waypoints-wrap">
+                    <h4>Hitos del recorrido</h4>
+                    <div className="video-waypoints-list">
+                      {selectedVideoTour.gpsTrack.waypoints.map((wp, i) => (
+                        <div className="video-waypoint-card" key={i}>
+                          <div className="waypoint-idx">{i + 1}</div>
+                          <div className="waypoint-info">
+                            <strong>{wp.name}</strong>
+                            <span>{wp.km} · {wp.altitude}</span>
+                            <p>{wp.desc}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            <div className="video-modal-bottom">
+              <div>
+                <span style={{ fontSize: '11px', color: '#68736b' }}>Precio por ciclista:</span>{' '}
+                <strong style={{ fontSize: '18px', color: '#233e31' }}>${selectedVideoTour.priceUSD} USD</strong>
+              </div>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => {
+                  const tourId = selectedVideoTour.id;
+                  setSelectedVideoTour(null);
+                  handleSelectTourForBooking(tourId);
+                }}
+                style={{
+                  background: '#233e31',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '3px',
+                  padding: '9px 18px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: 'pointer',
+                }}
+              >
+                Reservar esta ruta ahora <ArrowRight size={14} />
+              </button>
             </div>
           </div>
         </div>

@@ -16,7 +16,8 @@
   },
   "private": true,
   "dependencies": {
-    "@replit/connectors-sdk": "^0.4.3"
+    "@replit/connectors-sdk": "^0.4.3",
+    "@vis.gl/react-google-maps": "^1.10.2"
   },
   "devDependencies": {
     "prettier": "^3.9.10",
