@@ -1,25 +1,24 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import L from 'leaflet';
 import {
-  APIProvider,
-  Map,
-  AdvancedMarker,
-  Pin,
-  InfoWindow,
+  MapContainer,
+  Marker,
   Polyline,
+  Popup,
+  TileLayer,
   useMap,
-} from '@vis.gl/react-google-maps';
+} from 'react-leaflet';
 import {
   Flag,
   Navigation,
-  MapPin,
   Mountain,
   Compass,
   ArrowRight,
   Layers,
   Sparkles,
-  Maximize2,
   Video,
 } from 'lucide-react';
+import 'leaflet/dist/leaflet.css';
 
 export interface RoutePoint {
   id: string;
@@ -264,7 +263,6 @@ export const SACRED_VALLEY_MAP_DATA: TourMapData[] = [
   },
 ];
 
-// Inner helper component to pan/fit the camera smoothly when active tour changes
 function MapCameraController({
   activeTour,
 }: {
@@ -273,20 +271,49 @@ function MapCameraController({
   const map = useMap();
 
   useEffect(() => {
-    if (!map) return;
-
     if (activeTour) {
-      map.panTo(activeTour.center);
-      map.setZoom(activeTour.zoom);
+      map.fitBounds(
+        L.latLngBounds(activeTour.path.map(({ lat, lng }) => [lat, lng] as [number, number])),
+        { padding: [36, 36], maxZoom: activeTour.zoom, animate: true },
+      );
     } else {
-      // General Sacred Valley view
-      map.panTo({ lat: -13.36, lng: -72.06 });
-      map.setZoom(10);
+      map.setView([-13.36, -72.06], 10, { animate: true });
     }
   }, [map, activeTour]);
 
   return null;
 }
+
+const START_MARKER_ICON = L.divIcon({
+  className: 'tour-map-marker tour-map-marker-start',
+  html: '<span aria-hidden="true">I</span>',
+  iconSize: [30, 30],
+  iconAnchor: [15, 15],
+});
+
+const END_MARKER_ICON = L.divIcon({
+  className: 'tour-map-marker tour-map-marker-end',
+  html: '<span aria-hidden="true">F</span>',
+  iconSize: [30, 30],
+  iconAnchor: [15, 15],
+});
+
+const MAP_TILES = {
+  terrain: {
+    url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+    attribution: 'Map data © OpenStreetMap contributors, SRTM | Map style © OpenTopoMap',
+  },
+  roadmap: {
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '© OpenStreetMap contributors',
+  },
+  cycling: {
+    url: 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
+    attribution: '© OpenStreetMap contributors | CyclOSM',
+  },
+} as const;
+
+type MapStyle = keyof typeof MAP_TILES;
 
 interface TourMapProps {
   onSelectTourForBooking: (tourId: string) => void;
@@ -297,10 +324,9 @@ export default function TourMap({
   onSelectTourForBooking,
   onOpenTourVideo,
 }: TourMapProps) {
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
   const [selectedTourId, setSelectedTourId] = useState<string>('all');
   const [selectedPoint, setSelectedPoint] = useState<RoutePoint | null>(null);
-  const [mapType, setMapType] = useState<google.maps.MapTypeId | 'terrain' | 'roadmap' | 'hybrid'>('terrain');
+  const [mapType, setMapType] = useState<MapStyle>('terrain');
 
   const activeTour = selectedTourId === 'all'
     ? null
@@ -375,11 +401,11 @@ export default function TourMap({
             </button>
             <button
               type="button"
-              className={mapType === 'hybrid' ? 'active' : ''}
-              onClick={() => setMapType('hybrid')}
-              title="Fotografía satelital"
+              className={mapType === 'cycling' ? 'active' : ''}
+              onClick={() => setMapType('cycling')}
+              title="Mapa con rutas y caminos para bicicleta"
             >
-              Satélite
+              Ciclista
             </button>
           </div>
         </div>
@@ -387,141 +413,119 @@ export default function TourMap({
 
       {/* Main Map Canvas Wrap */}
       <div className="tour-map-canvas-container">
-        {apiKey ? (
-          <APIProvider apiKey={apiKey} libraries={['marker', 'geometry']}>
-            <Map
-              mapId="DEMO_MAP_ID"
-              defaultCenter={{ lat: -13.36, lng: -72.06 }}
-              defaultZoom={10}
-              mapTypeId={mapType}
-              gestureHandling="greedy"
-              disableDefaultUI={false}
-              zoomControl={true}
-              streetViewControl={false}
-              mapTypeControl={false}
-              fullscreenControl={true}
-              internalUsageAttributionIds={['gmp_mcp_codeassist_v1_aistudio']}
-              style={{ width: '100%', height: '100%' }}
-            >
-              <MapCameraController activeTour={activeTour} />
+        <MapContainer
+          className="tour-leaflet-map"
+          center={[-13.36, -72.06]}
+          zoom={10}
+          minZoom={5}
+          maxZoom={19}
+          scrollWheelZoom
+          keyboard
+          aria-label="Mapa interactivo de rutas en el Valle Sagrado"
+          style={{ width: '100%', height: '100%' }}
+        >
+          <MapCameraController activeTour={activeTour} />
+          <TileLayer
+            key={mapType}
+            attribution={MAP_TILES[mapType].attribution}
+            url={MAP_TILES[mapType].url}
+            maxZoom={19}
+          />
 
-              {/* Polylines for each tour */}
-              {toursToRender.map((tour) => {
-                const isFocused = activeTour?.id === tour.id;
-                return (
-                  <Polyline
-                    key={`route-${tour.id}`}
-                    path={tour.path}
-                    strokeColor={tour.strokeColor}
-                    strokeOpacity={isFocused ? 0.95 : 0.75}
-                    strokeWeight={isFocused ? 5 : 3.5}
+          {toursToRender.map((tour) => {
+            const isFocused = activeTour?.id === tour.id;
+            return (
+              <Polyline
+                key={`route-${tour.id}`}
+                positions={tour.path}
+                pathOptions={{
+                  color: tour.strokeColor,
+                  opacity: isFocused ? 0.95 : 0.75,
+                  weight: isFocused ? 5 : 3.5,
+                  lineCap: 'round',
+                  lineJoin: 'round',
+                }}
+              />
+            );
+          })}
+
+          {toursToRender.map((tour) => (
+            <React.Fragment key={`markers-${tour.id}`}>
+              <Marker
+                position={tour.startPoint.position}
+                icon={START_MARKER_ICON}
+                title={`${tour.name} - ${tour.startPoint.name}`}
+                alt={`Inicio: ${tour.startPoint.name}`}
+                eventHandlers={{ click: () => handlePointClick(tour.startPoint) }}
+              />
+              <Marker
+                position={tour.endPoint.position}
+                icon={END_MARKER_ICON}
+                title={`${tour.name} - ${tour.endPoint.name}`}
+                alt={`Llegada: ${tour.endPoint.name}`}
+                eventHandlers={{ click: () => handlePointClick(tour.endPoint) }}
+              />
+              {activeTour?.id === tour.id &&
+                tour.waypoints.map((waypoint, index) => (
+                  <Marker
+                    key={waypoint.id}
+                    position={waypoint.position}
+                    icon={L.divIcon({
+                      className: 'tour-waypoint-icon',
+                      html: `<span class="tour-waypoint-pin" aria-hidden="true">${index + 1}</span>`,
+                      iconSize: [24, 24],
+                      iconAnchor: [12, 12],
+                    })}
+                    title={waypoint.name}
+                    alt={`Hito: ${waypoint.name}`}
+                    eventHandlers={{ click: () => handlePointClick(waypoint) }}
                   />
-                );
-              })}
+                ))}
+            </React.Fragment>
+          ))}
 
-              {/* Start & End Advanced Markers for each tour */}
-              {toursToRender.map((tour) => (
-                <React.Fragment key={`markers-${tour.id}`}>
-                  {/* Start Point Marker */}
-                  <AdvancedMarker
-                    position={tour.startPoint.position}
-                    onClick={() => handlePointClick(tour.startPoint)}
-                    title={`${tour.name} - ${tour.startPoint.name}`}
-                  >
-                    <Pin
-                      background="#15803d"
-                      borderColor="#14532d"
-                      glyphColor="#ffffff"
-                      scale={1.15}
-                    >
-                      <Flag size={12} fill="#ffffff" color="#ffffff" />
-                    </Pin>
-                  </AdvancedMarker>
-
-                  {/* End Point Marker */}
-                  <AdvancedMarker
-                    position={tour.endPoint.position}
-                    onClick={() => handlePointClick(tour.endPoint)}
-                    title={`${tour.name} - ${tour.endPoint.name}`}
-                  >
-                    <Pin
-                      background="#b45309"
-                      borderColor="#78350f"
-                      glyphColor="#ffffff"
-                      scale={1.15}
-                    >
-                      <Navigation size={12} fill="#ffffff" color="#ffffff" />
-                    </Pin>
-                  </AdvancedMarker>
-
-                  {/* Intermediate Waypoints when a specific tour is selected */}
-                  {activeTour?.id === tour.id &&
-                    tour.waypoints.map((wp, i) => (
-                      <AdvancedMarker
-                        key={wp.id}
-                        position={wp.position}
-                        onClick={() => handlePointClick(wp)}
-                        title={wp.name}
-                      >
-                        <div className="tour-waypoint-pin">
-                          <span>{i + 1}</span>
-                        </div>
-                      </AdvancedMarker>
-                    ))}
-                </React.Fragment>
-              ))}
-
-              {/* Active Marker InfoWindow */}
-              {selectedPoint && (
-                <InfoWindow
-                  position={selectedPoint.position}
-                  onCloseClick={() => setSelectedPoint(null)}
-                  maxWidth={280}
+          {selectedPoint && (
+            <Popup
+              position={selectedPoint.position}
+              maxWidth={280}
+              eventHandlers={{ remove: () => setSelectedPoint(null) }}
+            >
+              <div className="map-infowindow">
+                <div
+                  className="map-infowindow-badge"
+                  style={{
+                    background:
+                      selectedPoint.type === 'start'
+                        ? '#dcfce7'
+                        : selectedPoint.type === 'end'
+                          ? '#fef3c7'
+                          : '#f1f5f9',
+                    color:
+                      selectedPoint.type === 'start'
+                        ? '#166534'
+                        : selectedPoint.type === 'end'
+                          ? '#92400e'
+                          : '#334155',
+                  }}
                 >
-                  <div className="map-infowindow">
-                    <div
-                      className="map-infowindow-badge"
-                      style={{
-                        background:
-                          selectedPoint.type === 'start'
-                            ? '#dcfce7'
-                            : selectedPoint.type === 'end'
-                              ? '#fef3c7'
-                              : '#f1f5f9',
-                        color:
-                          selectedPoint.type === 'start'
-                            ? '#166534'
-                            : selectedPoint.type === 'end'
-                              ? '#92400e'
-                              : '#334155',
-                      }}
-                    >
-                      {selectedPoint.type === 'start' && '🚩 PUNTO DE INICIO'}
-                      {selectedPoint.type === 'end' && '🏁 PUNTO DE LLEGADA'}
-                      {selectedPoint.type === 'waypoint' && '📍 HITO EN RUTA'}
-                    </div>
-                    <h4>{selectedPoint.name}</h4>
-                    <div className="map-infowindow-altitude">
-                      <Mountain size={12} /> {selectedPoint.altitude}
-                    </div>
-                    <p>{selectedPoint.desc}</p>
-                    {selectedPoint.photoCue && (
-                      <div className="map-infowindow-cue">
-                        <Sparkles size={11} /> {selectedPoint.photoCue}
-                      </div>
-                    )}
+                  {selectedPoint.type === 'start' && 'PUNTO DE INICIO'}
+                  {selectedPoint.type === 'end' && 'PUNTO DE LLEGADA'}
+                  {selectedPoint.type === 'waypoint' && 'HITO EN RUTA'}
+                </div>
+                <h4>{selectedPoint.name}</h4>
+                <div className="map-infowindow-altitude">
+                  <Mountain size={12} /> {selectedPoint.altitude}
+                </div>
+                <p>{selectedPoint.desc}</p>
+                {selectedPoint.photoCue && (
+                  <div className="map-infowindow-cue">
+                    <Sparkles size={11} /> {selectedPoint.photoCue}
                   </div>
-                </InfoWindow>
-              )}
-            </Map>
-          </APIProvider>
-        ) : (
-          <div className="tour-map-fallback">
-            <Compass size={32} />
-            <h4>Cargando mapa interactivo del Valle Sagrado...</h4>
-            <p>Configurando coordenadas y trazados satelitales.</p>
-          </div>
-        )}
+                )}
+              </div>
+            </Popup>
+          )}
+        </MapContainer>
 
         {/* Legend Overlay at bottom left */}
         <div className="tour-map-legend">

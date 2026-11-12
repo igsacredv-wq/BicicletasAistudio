@@ -873,7 +873,7 @@ button { color: inherit; }
 }
 
 /* ========================================================
-   Tour Interactive Map Component Styles (Google Maps)
+   Tour Interactive Map Component Styles (Leaflet)
    ======================================================== */
 .tour-map-wrapper {
   margin: 36px 0 24px;
@@ -997,7 +997,20 @@ button { color: inherit; }
   height: 520px;
   min-height: 480px;
   background: #f3f0e8;
-}
+  }
+
+.tour-map-canvas-container > .tour-leaflet-map {
+  position: relative;
+  z-index: 0;
+  font-family: inherit;
+  background: #f3f0e8;
+  }
+
+.tour-map-legend,
+.tour-map-card {
+  z-index: 500;
+  }
+
 
 .tour-map-fallback {
   width: 100%;
@@ -1043,7 +1056,35 @@ button { color: inherit; }
 .tour-waypoint-pin:hover {
   transform: scale(1.2);
   background: #f7d283;
-}
+  }
+
+.tour-waypoint-icon {
+  background: transparent;
+  border: 0;
+  }
+
+.tour-map-marker {
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  }
+
+.tour-map-marker-start {
+  background: #15803d;
+  }
+
+.tour-map-marker-end {
+  background: #b45309;
+  }
+
 
 /* Map InfoWindow */
 .map-infowindow {
