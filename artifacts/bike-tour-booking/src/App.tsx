@@ -54,6 +54,7 @@ export interface GpsTrack {
   avgSpeed: string;
   date: string;
   rider: string;
+  riderTitle?: string;
   waypoints: Waypoint[];
 }
 
@@ -303,13 +304,6 @@ function Home() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchDestination, setSearchDestination] = useState('');
   const [searched, setSearched] = useState(false);
-  const [quotaExceeded, setQuotaExceeded] = useState(false);
-
-  useEffect(() => {
-    const handleQuota = () => setQuotaExceeded(true);
-    window.addEventListener('gmp-quota-exceeded', handleQuota);
-    return () => window.removeEventListener('gmp-quota-exceeded', handleQuota);
-  }, []);
 
   const selectedTour = useMemo(
     () => TOURS.find((t) => t.id === selectedTourId) || TOURS[0],
@@ -438,23 +432,6 @@ function Home() {
 
   return (
     <div className="site-shell">
-      {quotaExceeded && (
-        <div className="bg-amber-50 border-b border-amber-200 text-amber-900 px-4 py-2.5 text-xs md:text-sm text-center sticky top-0 z-50 shadow-sm">
-          <span>
-            Google Maps Platform quota reached. If you are the app owner, visit{' '}
-            <a
-              href="https://developers.google.com/maps/ai/ai-studio?utm_campaign=gmp_mcp_codeassist_v1_aistudio#quota_exceeded_errors"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline font-semibold text-amber-950 hover:text-amber-800"
-            >
-              maps developer site
-            </a>{' '}
-            for instructions to update your account.
-          </span>
-        </div>
-      )}
-
       {/* Top announcement bar */}
       <div className="announcement">
         <span className="announcement-dot" /> Aventura local · Cusco, Perú{' '}
