@@ -58,6 +58,13 @@ export interface GpsTrack {
   waypoints: Waypoint[];
 }
 
+export interface TourVideo {
+  url: string;
+  label: string;
+  badge?: string;
+  hasGpsTelemetry?: boolean;
+}
+
 export interface Tour {
   id: string;
   name: string;
@@ -77,6 +84,7 @@ export interface Tour {
   reviews: number;
   videoUrl?: string;
   videoBadge?: string;
+  videos?: TourVideo[];
   gpsTrack?: GpsTrack;
 }
 
@@ -101,6 +109,19 @@ const TOURS: Tour[] = [
     reviews: 142,
     videoUrl: '/videos/maras-relive-tour.mp4',
     videoBadge: 'Ruta 3D Relive · 36.5 km',
+    videos: [
+      {
+        url: '/videos/maras-salineras-tour.mp4',
+        label: 'Recorrido por las salineras',
+        badge: 'Video del recorrido',
+      },
+      {
+        url: '/videos/maras-relive-tour.mp4',
+        label: 'Ruta GPS 3D',
+        badge: 'Ruta 3D Relive · 36.5 km',
+        hasGpsTelemetry: true,
+      },
+    ],
     gpsTrack: {
       distance: '36.5 km',
       duration: '5h 30m',
@@ -286,11 +307,28 @@ const GALLERY_PHOTOS: GalleryPhoto[] = [
   },
 ];
 
+function getTourVideos(tour: Tour): TourVideo[] {
+  if (tour.videos?.length) return tour.videos;
+
+  const videoUrl = tour.videoUrl;
+  if (!videoUrl) return [];
+
+  return [
+    {
+      url: videoUrl,
+      label: tour.gpsTrack ? 'Ruta GPS 3D' : 'Video del recorrido',
+      badge: tour.videoBadge,
+      hasGpsTelemetry: Boolean(tour.gpsTrack),
+    },
+  ];
+}
+
 function Home() {
   const [activeCategory, setActiveCategory] = useState('Todos');
   const [galleryCategory, setGalleryCategory] = useState<string>('Todas');
   const [activePhoto, setActivePhoto] = useState<GalleryPhoto | null>(null);
   const [selectedVideoTour, setSelectedVideoTour] = useState<Tour | null>(null);
+  const [selectedVideoIndex, setSelectedVideoIndex] = useState(0);
   const [selectedTourId, setSelectedTourId] = useState<string>('maras-salt-mines');
   const [date, setDate] = useState(() => {
     const tomorrow = new Date();
@@ -311,6 +349,8 @@ function Home() {
     () => TOURS.find((t) => t.id === selectedTourId) || TOURS[0],
     [selectedTourId],
   );
+  const selectedVideoClips = selectedVideoTour ? getTourVideos(selectedVideoTour) : [];
+  const activeVideo = selectedVideoClips[selectedVideoIndex] ?? selectedVideoClips[0];
 
   const shownTours = useMemo(() => {
     return TOURS.filter((tour) => {
@@ -782,22 +822,34 @@ function Home() {
                       loading="lazy"
                     />
                     {tour.badge && <span className="tour-badge">{tour.badge}</span>}
-                    {tour.videoUrl && (
+                    {getTourVideos(tour).length > 0 && (
                       <button
                         type="button"
                         className="tour-video-pill"
                         onClick={(e) => {
                           e.stopPropagation();
+                          setSelectedVideoIndex(0);
                           setSelectedVideoTour(tour);
                         }}
                         aria-label={
-                          tour.gpsTrack
-                            ? `Ver video y ruta 3D de ${tour.name}`
-                            : `Ver video del recorrido ${tour.name}`
+                          getTourVideos(tour).length > 1
+                            ? `Ver videos del tour ${tour.name}`
+                            : tour.gpsTrack
+                              ? `Ver video y ruta 3D de ${tour.name}`
+                              : `Ver video del recorrido ${tour.name}`
                         }
-                        title={tour.gpsTrack ? 'Ver video 3D y ruta GPS' : 'Ver video del recorrido'}
+                        title={
+                          getTourVideos(tour).length > 1
+                            ? 'Ver videos del tour'
+                            : tour.gpsTrack
+                              ? 'Ver video 3D y ruta GPS'
+                              : 'Ver video del recorrido'
+                        }
                       >
-                        <Play size={10} fill="currentColor" /> {tour.videoBadge || 'Ruta 3D Relive'}
+                        <Play size={10} fill="currentColor" />{' '}
+                        {getTourVideos(tour).length > 1
+                          ? `${getTourVideos(tour).length} videos disponibles`
+                          : tour.videoBadge || 'Ruta 3D Relive'}
                       </button>
                     )}
                     <span className="tour-difficulty">{tour.difficulty}</span>
@@ -837,21 +889,28 @@ function Home() {
                       {tour.description}
                     </p>
 
-                    {tour.videoUrl && (
+                    {getTourVideos(tour).length > 0 && (
                       <button
                         type="button"
                         className="tour-video-action-btn"
-                        onClick={() => setSelectedVideoTour(tour)}
+                        onClick={() => {
+                          setSelectedVideoIndex(0);
+                          setSelectedVideoTour(tour);
+                        }}
                         title={
-                          tour.gpsTrack
-                            ? 'Abrir video 3D y telemetría GPS'
-                            : 'Ver video del recorrido'
+                          getTourVideos(tour).length > 1
+                            ? 'Ver videos del recorrido'
+                            : tour.gpsTrack
+                              ? 'Abrir video 3D y telemetría GPS'
+                              : 'Ver video del recorrido'
                         }
                       >
                         <Video size={13} />{' '}
-                        {tour.gpsTrack
-                          ? 'Ver recorrido GPS en video 3D'
-                          : 'Ver video del recorrido'}{' '}
+                        {getTourVideos(tour).length > 1
+                          ? 'Ver videos del recorrido'
+                          : tour.gpsTrack
+                            ? 'Ver recorrido GPS en video 3D'
+                            : 'Ver video del recorrido'}{' '}
                         ({tour.gpsTrack?.distance || `${tour.distanceKm} km`})
                       </button>
                     )}
@@ -1547,15 +1606,15 @@ function Home() {
         </div>
       )}
 
-      {/* Video Modal (Relive 3D GPS Route) */}
-      {selectedVideoTour && selectedVideoTour.videoUrl && (
+      {/* Tour video modal */}
+      {selectedVideoTour && activeVideo && (
         <div
           className="video-modal-backdrop"
           onClick={() => setSelectedVideoTour(null)}
           role="dialog"
           aria-modal="true"
           aria-label={
-            selectedVideoTour.gpsTrack
+            activeVideo.hasGpsTelemetry && selectedVideoTour.gpsTrack
               ? `Video de ruta 3D: ${selectedVideoTour.name}`
               : `Video del tour: ${selectedVideoTour.name}`
           }
@@ -1578,11 +1637,12 @@ function Home() {
                     textTransform: 'uppercase',
                   }}
                 >
-                  <Activity size={13} /> {selectedVideoTour.videoBadge || 'Grabación GPS 3D Relive'}
+                  {activeVideo.hasGpsTelemetry ? <Activity size={13} /> : <Video size={13} />}{' '}
+                  {activeVideo.badge || selectedVideoTour.videoBadge || 'Video del recorrido'}
                 </div>
                 <h3>{selectedVideoTour.name}</h3>
                 <p>
-                  {selectedVideoTour.gpsTrack
+                  {activeVideo.hasGpsTelemetry && selectedVideoTour.gpsTrack
                     ? `${selectedVideoTour.gpsTrack.riderTitle || selectedVideoTour.gpsTrack.rider} · ${selectedVideoTour.gpsTrack.date}`
                     : selectedVideoTour.city}
                 </p>
@@ -1600,8 +1660,9 @@ function Home() {
 
             <div className="video-player-box">
               <video
-                src={selectedVideoTour.videoUrl}
-                aria-label={`Video del tour ${selectedVideoTour.name}`}
+                key={activeVideo.url}
+                src={activeVideo.url}
+                aria-label={`${activeVideo.label} del tour ${selectedVideoTour.name}`}
                 controls
                 autoPlay
                 loop
@@ -1612,7 +1673,28 @@ function Home() {
               </video>
             </div>
 
-            {selectedVideoTour.gpsTrack && (
+            {selectedVideoClips.length > 1 && (
+              <div
+                className="video-clip-selector"
+                role="group"
+                aria-label={`Videos de ${selectedVideoTour.name}`}
+              >
+                {selectedVideoClips.map((clip, index) => (
+                  <button
+                    key={clip.url}
+                    type="button"
+                    className="video-clip-button"
+                    aria-pressed={index === selectedVideoIndex}
+                    onClick={() => setSelectedVideoIndex(index)}
+                  >
+                    <Video size={14} />
+                    <span>{clip.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {activeVideo.hasGpsTelemetry && selectedVideoTour.gpsTrack && (
               <>
                 <div className="video-telemetry-strip">
                   <div className="video-metric-item">
