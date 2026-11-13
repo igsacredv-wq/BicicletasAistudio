@@ -591,6 +591,49 @@ button { color: inherit; }
   outline: none;
 }
 
+.video-clip-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #fffefa;
+  border-bottom: 1px solid #e3decb;
+}
+
+.video-clip-button {
+  display: inline-flex;
+  flex: 1 1 160px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 9px 14px;
+  border: 1px solid #d8dfd7;
+  border-radius: 4px;
+  background: #fff;
+  color: #425a4c;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.video-clip-button:hover {
+  border-color: #47624d;
+  background: #f7f5ed;
+}
+
+.video-clip-button[aria-pressed='true'] {
+  border-color: #233e31;
+  background: #233e31;
+  color: #fff;
+}
+
+.video-clip-button:focus-visible {
+  outline: 3px solid #bf9a58;
+  outline-offset: 2px;
+}
+
 .video-telemetry-strip {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
