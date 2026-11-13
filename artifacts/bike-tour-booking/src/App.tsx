@@ -198,6 +198,8 @@ const TOURS: Tour[] = [
     badge: 'Jornada completa',
     rating: '4,99',
     reviews: 87,
+    videoUrl: '/videos/el-gran-valle-sagrado.mp4',
+    videoBadge: 'Video del recorrido · 42 km',
   },
 ];
 
@@ -788,8 +790,12 @@ function Home() {
                           e.stopPropagation();
                           setSelectedVideoTour(tour);
                         }}
-                        aria-label={`Ver video y ruta 3D de ${tour.name}`}
-                        title="Ver video 3D y ruta GPS"
+                        aria-label={
+                          tour.gpsTrack
+                            ? `Ver video y ruta 3D de ${tour.name}`
+                            : `Ver video del recorrido ${tour.name}`
+                        }
+                        title={tour.gpsTrack ? 'Ver video 3D y ruta GPS' : 'Ver video del recorrido'}
                       >
                         <Play size={10} fill="currentColor" /> {tour.videoBadge || 'Ruta 3D Relive'}
                       </button>
@@ -836,9 +842,17 @@ function Home() {
                         type="button"
                         className="tour-video-action-btn"
                         onClick={() => setSelectedVideoTour(tour)}
-                        title="Abrir video 3D y telemetría de ruta"
+                        title={
+                          tour.gpsTrack
+                            ? 'Abrir video 3D y telemetría GPS'
+                            : 'Ver video del recorrido'
+                        }
                       >
-                        <Video size={13} /> Ver recorrido GPS en video 3D ({tour.gpsTrack?.distance || `${tour.distanceKm} km`})
+                        <Video size={13} />{' '}
+                        {tour.gpsTrack
+                          ? 'Ver recorrido GPS en video 3D'
+                          : 'Ver video del recorrido'}{' '}
+                        ({tour.gpsTrack?.distance || `${tour.distanceKm} km`})
                       </button>
                     )}
 
@@ -1540,7 +1554,11 @@ function Home() {
           onClick={() => setSelectedVideoTour(null)}
           role="dialog"
           aria-modal="true"
-          aria-label={`Video de ruta 3D: ${selectedVideoTour.name}`}
+          aria-label={
+            selectedVideoTour.gpsTrack
+              ? `Video de ruta 3D: ${selectedVideoTour.name}`
+              : `Video del tour: ${selectedVideoTour.name}`
+          }
         >
           <div
             className="video-modal"
@@ -1564,7 +1582,9 @@ function Home() {
                 </div>
                 <h3>{selectedVideoTour.name}</h3>
                 <p>
-                  {selectedVideoTour.gpsTrack?.riderTitle || 'Juan Gabriel Salazar'} · {selectedVideoTour.gpsTrack?.date || 'Valle Sagrado, Cusco'}
+                  {selectedVideoTour.gpsTrack
+                    ? `${selectedVideoTour.gpsTrack.riderTitle || selectedVideoTour.gpsTrack.rider} · ${selectedVideoTour.gpsTrack.date}`
+                    : selectedVideoTour.city}
                 </p>
               </div>
 
@@ -1581,6 +1601,7 @@ function Home() {
             <div className="video-player-box">
               <video
                 src={selectedVideoTour.videoUrl}
+                aria-label={`Video del tour ${selectedVideoTour.name}`}
                 controls
                 autoPlay
                 loop
