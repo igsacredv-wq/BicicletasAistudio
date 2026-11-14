@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/components/error-boundary';
+import { HeroCoverVideo } from '@/components/hero-cover-video';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
@@ -592,12 +593,7 @@ function Home() {
           </div>
 
           <div className="hero-image-wrap reveal-scale delay-2">
-            <img
-              className="hero-image"
-              src="/assets/aistudio/IMG_20261012_161823591_HDR_d112481d.jpg"
-              alt="Ciclistas en el Valle Sagrado"
-              fetchPriority="high"
-            />
+            <HeroCoverVideo />
             <div className="image-shade" />
             <div className="hero-image-caption">
               <span className="caption-pin">
